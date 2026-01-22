@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mac Stellar Wallpaper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #000000;
+        }
+
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #logo-template {
+            display: none;
+            /* Hidden - only used for path extraction */
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+
+    <!-- Hidden SVG template for extracting logo shape -->
+    <svg id="logo-template" viewBox="0 0 790 980" xmlns="http://www.w3.org/2000/svg">
+        <g transform="translate(0,0) scale(0.1,0.1)">
+            <path id="leaf"
+                d="M5541 9785 c-209 -39 -535 -184 -786 -349 -294 -193 -569 -471 -739 -746 -219 -353 -329 -725 -330 -1110 0 -150 2 -171 23 -225 30 -76 90 -135 168 -166 87 -34 321 -39 489 -10 511 86 965 401 1287 891 160 244 306 601 361 887 54 277 56 569 5 678 -24 52 -81 105 -146 136 -57 28 -224 35 -332 14z m-104 -671 c10 -26 -15 -139 -59 -271 -47 -143 -168 -390 -253 -518 -187 -279 -522 -514 -802 -560 -41 -6 -43 -6 -43 18 0 38 64 254 110 370 150 383 503 738 935 939 90 42 103 45 112 22z" />
+            <path id="body"
+                d="M5505 7313 c-264 -34 -450 -81 -894 -228 -338 -111 -506 -155 -590 -155 -78 0 -196 32 -391 105 -107 40 -247 89 -310 109 -1017 316 -1885 94 -2542 -650 -367 -416 -598 -868 -702 -1376 -151 -738 -63 -1542 279 -2547 146 -428 284 -700 609 -1201 491 -758 749 -1046 1080 -1210 191 -94 345 -130 552 -130 216 0 416 34 884 150 376 93 516 121 645 127 95 4 126 2 230 -22 177 -40 402 -107 554 -165 264 -101 422 -127 716 -117 330 11 517 69 772 239 268 179 719 713 967 1147 159 276 410 802 485 1015 48 134 53 168 40 241 -20 118 -70 170 -266 279 -309 172 -536 417 -705 761 -75 153 -130 313 -152 446 -39 227 -45 591 -12 744 66 310 255 584 628 907 270 234 299 327 173 565 -248 470 -935 882 -1605 963 -79 9 -379 12 -445 3z m335 -593 c246 -10 288 -19 483 -103 199 -85 374 -198 557 -359 52 -46 53 -48 40 -73 -8 -15 -70 -85 -137 -156 -241 -255 -359 -414 -457 -621 -67 -140 -106 -250 -143 -404 -28 -118 -28 -122 -28 -444 0 -363 10 -459 69 -694 120 -472 374 -879 751 -1205 57 -49 139 -113 182 -142 43 -28 80 -54 82 -55 19 -16 -264 -582 -432 -864 -181 -303 -517 -708 -706 -850 -156 -117 -302 -169 -496 -177 -177 -7 -250 8 -563 118 -501 176 -599 199 -854 199 -252 0 -372 -20 -928 -155 -428 -104 -503 -118 -660 -119 -115 0 -132 2 -212 30 -219 78 -382 240 -695 694 -486 705 -713 1141 -868 1665 -154 521 -218 930 -219 1395 0 277 15 440 59 652 82 399 301 798 613 1120 287 296 565 446 942 510 97 16 431 16 535 -1 189 -30 374 -85 730 -216 256 -95 323 -113 445 -121 172 -12 369 29 795 164 600 190 683 211 875 220 14 1 122 -3 240 -8z" />
+        </g>
+    </svg>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+
+        let width, height;
+        let logoStars = [];
+        let bgStars = [];
+
+        // Set canvas size
+        function resizeCanvas() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        // Extract points from SVG path
+        function getPathPoints(pathElement, samples) {
+            const points = [];
+            const length = pathElement.getTotalLength();
+
+            for (let i = 0; i < samples; i++) {
+                const point = pathElement.getPointAtLength((i / samples) * length);
+                points.push({ x: point.x, y: point.y });
+            }
+            return points;
+        }
+
+        // Convert SVG coordinates to canvas-centered coordinates
+        function svgToScreen(svgPoints) {
+            const svg = document.getElementById('logo-template');
+            const viewBox = svg.viewBox.baseVal;
+
+            // CRITICAL: Apply the SVG transform scale(0.1, 0.1) to points
+            // The path coordinates are 10x larger than intended
+            const svgTransformScale = 0.1;
+
+            // Calculate REAL bounding box of the actual points (with transform applied)
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+
+            svgPoints.forEach(p => {
+                const scaledX = p.x * svgTransformScale;
+                const scaledY = p.y * svgTransformScale;
+                minX = Math.min(minX, scaledX);
+                maxX = Math.max(maxX, scaledX);
+                minY = Math.min(minY, scaledY);
+                maxY = Math.max(maxY, scaledY);
+            });
+
+            // Real center of the logo (not viewBox center)
+            const logoCenterX = (minX + maxX) / 2;
+            const logoCenterY = (minY + maxY) / 2;
+
+            // Real dimensions of the logo
+            const logoWidth = maxX - minX;
+            const logoHeight = maxY - minY;
+
+            // Calculate canvas center
+            const canvasCenterX = width / 2;
+            const canvasCenterY = height / 2;
+
+            // Scale to desired size (20% of viewport width for good visibility)
+            const desiredWidth = width * 0.20;
+            const scale = desiredWidth / logoWidth;
+
+            return svgPoints.map(p => ({
+                // Apply SVG transform, center, scale, move to canvas center
+                x: canvasCenterX + ((p.x * svgTransformScale - logoCenterX) * scale),
+                y: canvasCenterY - ((p.y * svgTransformScale - logoCenterY) * scale)
+            }));
+        }
+
+        let screenPoints = []; // Store screen points globally
+
+        function init() {
+            resizeCanvas();  // Update width/height FIRST
+
+            // Extract logo points
+            const leafPath = document.getElementById('leaf');
+            const bodyPath = document.getElementById('body');
+
+            const leafPoints = getPathPoints(leafPath, 300);
+            const bodyPoints = getPathPoints(bodyPath, 600);
+            const allPoints = [...leafPoints, ...bodyPoints];
+            screenPoints = svgToScreen(allPoints);  // Uses updated width/height
+
+            // Much cleaner, sparser constellation with cyan glow
+            logoStars = [];
+            const layers = [
+                // Core - bright stars with cyan tones
+                { count: 500, dist: [0, 4], sizes: [1.5, 2, 2.5], colors: ['#fff', '#00d4ff', '#4dd0e1', '#fff'], brightness: [0.8, 1], glow: 1.2, speed: [0.003, 0.006] },
+                // Inner - mix of white and cyan
+                { count: 400, dist: [4, 12], sizes: [1, 1.5, 2], colors: ['#fff', '#26c6da', '#4dd0e1'], brightness: [0.7, 0.9], glow: 1.15, speed: [0.002, 0.005] },
+                // Medium - subtle cyan glow
+                { count: 500, dist: [12, 25], sizes: [0.8, 1, 1.5], colors: ['#fff', '#4dd0e1', '#80deea'], brightness: [0.6, 0.8], glow: 1.1, speed: [0.002, 0.004] },
+                // Outer - very sparse, subtle
+                { count: 400, dist: [25, 45], sizes: [0.8, 1], colors: ['#80deea', '#b3d9ff'], brightness: [0.4, 0.6], glow: 1.1, speed: [0.001, 0.003] }
+            ];
+
+            layers.forEach(layer => {
+                for (let i = 0; i < layer.count; i++) {
+                    const pt = screenPoints[Math.floor(Math.random() * screenPoints.length)];
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = layer.dist[0] + Math.random() * (layer.dist[1] - layer.dist[0]);
+
+                    const destX = pt.x + Math.cos(angle) * dist;
+                    const destY = pt.y + Math.sin(angle) * dist;
+
+                    logoStars.push({
+                        x: destX,
+                        y: destY,
+                        destX: destX,
+                        destY: destY,
+                        layer: layer, // Store layer config for morphing
+                        size: layer.sizes[Math.floor(Math.random() * layer.sizes.length)],
+                        color: layer.colors[Math.floor(Math.random() * layer.colors.length)],
+                        brightness: layer.brightness[0] + Math.random() * (layer.brightness[1] - layer.brightness[0]),
+                        glow: layer.glow,
+                        speed: layer.speed[0] + Math.random() * (layer.speed[1] - layer.speed[0]),
+                        phase: Math.random() * Math.PI * 2
+                    });
+                }
+            });
+
+            // Enhanced background stars with variety
+            bgStars = [];
+            for (let i = 0; i < 800; i++) {
+                const rand = Math.random();
+                let size, brightness, color;
+
+                if (rand < 0.6) {
+                    // Small white stars
+                    size = 0.5 + Math.random() * 1;
+                    brightness = Math.random() * 0.4 + 0.2;
+                    color = '#ffffff';
+                } else if (rand < 0.85) {
+                    // Medium cyan stars
+                    size = 1 + Math.random() * 1.5;
+                    brightness = Math.random() * 0.5 + 0.3;
+                    color = Math.random() > 0.5 ? '#80deea' : '#4dd0e1';
+                } else {
+                    // Larger bright stars (focal points)
+                    size = 1.5 + Math.random() * 1;
+                    brightness = Math.random() * 0.6 + 0.4;
+                    color = Math.random() > 0.5 ? '#00d4ff' : '#ffffff';
+                }
+
+                bgStars.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    size: size,
+                    brightness: brightness,
+                    color: color,
+                    speed: Math.random() * 0.004 + 0.002,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        // Handle window resize
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                init();  // Reinitialize everything with new dimensions
+            }, 250);
+        });
+
+        // Generate new destination points for all stars
+        function morphConstellation() {
+            logoStars.forEach(star => {
+                const layer = star.layer;
+                const pt = screenPoints[Math.floor(Math.random() * screenPoints.length)];
+                const angle = Math.random() * Math.PI * 2;
+                const dist = layer.dist[0] + Math.random() * (layer.dist[1] - layer.dist[0]);
+
+                // Set new destination
+                star.destX = pt.x + Math.cos(angle) * dist;
+                star.destY = pt.y + Math.sin(angle) * dist;
+            });
+        }
+
+        function hexToRgb(hex) {
+            if (hex === '#fff') return { r: 255, g: 255, b: 255 };
+            const r = parseInt(hex.substr(1, 2), 16);
+            const g = parseInt(hex.substr(3, 2), 16);
+            const b = parseInt(hex.substr(5, 2), 16);
+            return { r, g, b };
+        }
+
+        function drawStar(star, time) {
+            // Smoothly move towards destination
+            star.x += (star.destX - star.x) * 0.02;
+            star.y += (star.destY - star.y) * 0.02;
+
+            // More pronounced twinkle - oscillates between 0.5 and 1.0
+            const twinkle = (Math.sin(time * star.speed + star.phase) + 1) / 2;
+            const alpha = star.brightness * (0.5 + twinkle * 0.5);  // Varies from 50% to 100% of brightness
+            const rgb = hexToRgb(star.color);
+
+            // Soft glow with twinkle
+            const glow = ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, star.size * star.glow);
+            glow.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`);
+            glow.addColorStop(0.5, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.5})`);
+            glow.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`);
+
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.size * star.glow, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Bright core with twinkle
+            const core = ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, star.size * 0.8);
+            core.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+            core.addColorStop(0.6, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.8})`);
+            core.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`);
+
+            ctx.fillStyle = core;
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.size * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function animate(time) {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+
+            // Background stars with color
+            bgStars.forEach(star => {
+                const twinkle = (Math.sin(time * star.speed + star.phase) + 1) / 2;
+                const alpha = star.brightness * twinkle;
+
+                const rgb = hexToRgb(star.color);
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Logo stars
+            logoStars.forEach(star => drawStar(star, time));
+
+            requestAnimationFrame(animate);
+        }
+
+        init();
+        setInterval(morphConstellation, 8000);
+        requestAnimationFrame(animate);
+    </script>
+</body>
+
+</html>

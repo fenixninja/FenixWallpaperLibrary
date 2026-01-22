@@ -1,0 +1,406 @@
+# Mac Stellar - Documentación Técnica de Funciones JavaScript
+
+## 🌟 Arquitectura del Sistema de Estrellas
+
+Este documento explica cómo funciona el sistema de generación y animación de la constelación del logo de Apple.
+
+---
+
+## 1. EXTRACCIÓN DE LA FORMA DEL LOGO
+
+### `getPathPoints(pathElement, samples)`
+
+**Propósito**: Extrae puntos a lo largo de los paths SVG del logo de Apple.
+
+**Parámetros**:
+- `pathElement` - Elemento `<path>` del SVG (leaf o body)
+- `samples` - Número de puntos a extraer (300 para hoja, 600 para cuerpo)
+
+**Funcionamiento**:
+```javascript
+const length = pathElement.getTotalLength();  // Longitud total del path
+for (let i = 0; i < samples; i++) {
+    const point = pathElement.getPointAtLength((i / samples) * length);
+    points.push({ x: point.x, y: point.y });
+}
+```
+
+**Output**: Array de coordenadas `[{x, y}, {x, y}, ...]` en espacio SVG (viewBox coordinates)
+
+---
+
+### `svgToScreen(svgPoints)`
+
+**Propósito**: Convierte coordenadas SVG a píxeles de pantalla reales.
+
+**Funcionamiento**:
+```javascript
+const rect = svg.getBoundingClientRect();     // Posición del SVG en pantalla
+const viewBox = svg.viewBox.baseVal;          // Sistema de coordenadas SVG
+
+const scaleX = rect.width / viewBox.width;    // Factor de escala X
+const scaleY = rect.height / viewBox.height;  // Factor de escala Y
+
+// Convertir cada punto
+x: rect.left + p.x * scaleX,
+y: rect.top + (viewBox.height - p.y) * scaleY  // ⚠️ Inversión Y para fix PostScript
+```
+
+**Corrección de Coordenadas Y**:
+- El SVG viene de PostScript (origen abajo-izquierda)
+- SVG web usa origen arriba-izquierda
+- `(viewBox.height - p.y)` invierte las coordenadas Y
+
+**Output**: Array de coordenadas en píxeles de pantalla reales
+
+---
+
+## 2. GENERACIÓN DE ESTRELLAS
+
+### `init()`
+
+**LA FUNCIÓN PRINCIPAL** - Inicializa todo el sistema.
+
+**Proceso completo**:
+
+#### Paso 1: Extracción de la forma del logo
+```javascript
+const leafPath = document.getElementById('leaf');
+const bodyPath = document.getElementById('body');
+
+const leafPoints = getPathPoints(leafPath, 300);    // 300 puntos de la hoja
+const bodyPoints = getPathPoints(bodyPath, 600);    // 600 puntos del cuerpo
+const allPoints = [...leafPoints, ...bodyPoints];   // 900 puntos totales
+
+screenPoints = svgToScreen(allPoints);  // Convierte a píxeles de pantalla
+```
+
+#### Paso 2: Creación de estrellas del logo (1,800 total)
+
+**4 Capas de densidad**:
+```javascript
+const layers = [
+    // Core - 500 estrellas, 0-4px del borde
+    { count: 500, dist: [0, 4], sizes: [1.5, 2, 2.5], 
+      colors: ['#fff', '#00d4ff', '#4dd0e1'], 
+      brightness: [0.8, 1], glow: 1.2, speed: [0.003, 0.006] },
+    
+    // Inner - 400 estrellas, 4-12px del borde
+    { count: 400, dist: [4, 12], sizes: [1, 1.5, 2], 
+      colors: ['#fff', '#26c6da', '#4dd0e1'], 
+      brightness: [0.7, 0.9], glow: 1.15, speed: [0.002, 0.005] },
+    
+    // Medium - 500 estrellas, 12-25px del borde
+    { count: 500, dist: [12, 25], sizes: [0.8, 1, 1.5], 
+      colors: ['#fff', '#4dd0e1', '#80deea'], 
+      brightness: [0.6, 0.8], glow: 1.1, speed: [0.002, 0.004] },
+    
+    // Outer - 400 estrellas, 25-45px del borde
+    { count: 400, dist: [25, 45], sizes: [0.8, 1], 
+      colors: ['#80deea', '#b3d9ff'], 
+      brightness: [0.4, 0.6], glow: 1.1, speed: [0.001, 0.003] }
+];
+```
+
+**Para cada estrella**:
+```javascript
+const pt = screenPoints[random];           // Punto random del contorno
+const angle = Math.random() * Math.PI * 2; // Ángulo aleatorio
+const dist = random(layer.dist);           // Distancia random de la capa
+
+const destX = pt.x + Math.cos(angle) * dist;
+const destY = pt.y + Math.sin(angle) * dist;
+
+logoStars.push({
+    x: destX,           // Posición actual X
+    y: destY,           // Posición actual Y
+    destX: destX,       // Posición destino X (para morphing)
+    destY: destY,       // Posición destino Y (para morphing)
+    layer: layer,       // Referencia a la capa (para regeneración)
+    size: random(layer.sizes),
+    color: random(layer.colors),
+    brightness: random(layer.brightness),
+    glow: layer.glow,
+    speed: random(layer.speed),  // Velocidad de twinkle
+    phase: random(0, PI*2)       // Fase inicial de twinkle
+});
+```
+
+#### Paso 3: Estrellas de fondo (800 total)
+
+**3 Categorías de tamaño**:
+```javascript
+// 60% pequeñas (0.5-1.5px) - blancas
+// 25% medianas (1-2.5px) - cyan (#80deea, #4dd0e1)
+// 15% grandes (1.5-2.5px) - cyan brillante (#00d4ff) o blancas
+```
+
+#### Paso 4: Activar morphing automático
+```javascript
+setInterval(morphConstellation, 8000);  // Cada 8 segundos
+```
+
+---
+
+## 3. MOVIMIENTO Y MORPHING
+
+### `morphConstellation()`
+
+**Propósito**: Regenera las posiciones destino de todas las estrellas del logo.
+
+**Cuándo se ejecuta**: Cada 8 segundos (automático vía `setInterval`)
+
+**Proceso**:
+```javascript
+logoStars.forEach(star => {
+    const layer = star.layer;  // Recupera configuración de la capa
+    
+    // Elige nuevo punto random del contorno
+    const pt = screenPoints[Math.floor(Math.random() * screenPoints.length)];
+    
+    // Calcula nueva posición con ángulo/distancia random
+    const angle = Math.random() * Math.PI * 2;
+    const dist = layer.dist[0] + Math.random() * (layer.dist[1] - layer.dist[0]);
+    
+    // Actualiza SOLO el destino (no la posición actual)
+    star.destX = pt.x + Math.cos(angle) * dist;
+    star.destY = pt.y + Math.sin(angle) * dist;
+});
+```
+
+**Resultado**: Las estrellas comienzan a moverse suavemente hacia las nuevas posiciones.
+
+---
+
+## 4. RENDERIZADO Y ANIMACIÓN
+
+### `drawStar(star, time)`
+
+**Propósito**: Dibuja y anima UNA estrella del logo.
+
+**Llamada**: Por cada estrella, en cada frame (~60 veces por segundo)
+
+**Proceso en 4 pasos**:
+
+#### 1. Movimiento Suave (Interpolación)
+```javascript
+star.x += (star.destX - star.x) * 0.02;  // Avanza 2% hacia destino en X
+star.y += (star.destY - star.y) * 0.02;  // Avanza 2% hacia destino en Y
+```
+- Tarda ~3-4 segundos en completar la transición
+- Movimiento suave tipo "ease-out"
+
+#### 2. Cálculo de Twinkle (Parpadeo)
+```javascript
+const twinkle = (Math.sin(time * star.speed + star.phase) + 1) / 2;
+// twinkle oscila entre 0 y 1 sinusoidalmente
+
+const alpha = star.brightness * (0.5 + twinkle * 0.5);
+// alpha oscila entre 50% y 100% del brightness base
+```
+
+#### 3. Dibujar Glow (Halo exterior)
+```javascript
+const glow = ctx.createRadialGradient(
+    star.x, star.y, 0,                    // Centro
+    star.x, star.y, star.size * star.glow // Radio (1.1-1.2x el tamaño)
+);
+glow.addColorStop(0, `rgba(r, g, b, ${alpha})`);       // 100% en centro
+glow.addColorStop(0.5, `rgba(r, g, b, ${alpha * 0.5})`); // 50% a mitad
+glow.addColorStop(1, `rgba(r, g, b, 0)`);              // 0% en borde
+```
+
+#### 4. Dibujar Core (Núcleo brillante)
+```javascript
+const core = ctx.createRadialGradient(
+    star.x, star.y, 0,
+    star.x, star.y, star.size * 0.8
+);
+core.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);    // Blanco puro en centro
+core.addColorStop(0.6, `rgba(r, g, b, ${alpha * 0.8})`);  // Color a 60%
+core.addColorStop(1, `rgba(r, g, b, 0)`);                 // Transparente en borde
+```
+
+---
+
+### `animate(time)`
+
+**EL LOOP PRINCIPAL DE ANIMACIÓN** - Se ejecuta ~60 veces por segundo.
+
+**Parámetro**:
+- `time` - Timestamp en milisegundos (provisto por `requestAnimationFrame`)
+
+**Proceso**:
+
+```javascript
+function animate(time) {
+    // 1. Limpiar canvas
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, width, height);
+    
+    // 2. Dibujar 800 estrellas de fondo
+    bgStars.forEach(star => {
+        const twinkle = (Math.sin(time * star.speed + star.phase) + 1) / 2;
+        const alpha = star.brightness * twinkle;
+        
+        const rgb = hexToRgb(star.color);
+        ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    
+    // 3. Dibujar 1,800 estrellas del logo
+    logoStars.forEach(star => drawStar(star, time));
+    
+    // 4. Programar siguiente frame
+    requestAnimationFrame(animate);
+}
+```
+
+**Orden de renderizado**:
+1. Fondo negro
+2. Estrellas de fondo (atrás)
+3. Estrellas del logo (adelante) ← más brillantes y grandes
+
+---
+
+## 5. FUNCIONES UTILITARIAS
+
+### `resizeCanvas()`
+
+**Propósito**: Ajusta el tamaño del canvas al viewport.
+
+```javascript
+width = canvas.width = window.innerWidth;
+height = canvas.height = window.innerHeight;
+```
+
+**Cuándo se llama**:
+- Al iniciar (`init()`)
+- Al redimensionar ventana (`window.addEventListener('resize', init)`)
+
+---
+
+### `hexToRgb(hex)`
+
+**Propósito**: Convierte colores hexadecimales a RGB para usar en `rgba()`.
+
+```javascript
+hexToRgb('#00d4ff') → { r: 0, g: 212, b: 255 }
+hexToRgb('#fff')    → { r: 255, g: 255, b: 255 }
+```
+
+**Usado en**: `drawStar()` y renderizado de estrellas de fondo.
+
+---
+
+## 📊 FLUJO COMPLETO DEL SISTEMA
+
+### Al Cargar la Página (STARTUP)
+
+```
+1. init()
+   ├─ Extrae forma del logo
+   │  ├─ getPathPoints(leafPath, 300)
+   │  ├─ getPathPoints(bodyPath, 600)
+   │  └─ svgToScreen(allPoints)
+   │
+   ├─ Crea 1,800 estrellas del logo
+   │  └─ 4 capas con distribución espacial
+   │
+   ├─ Crea 800 estrellas de fondo
+   │  └─ 3 categorías de tamaño
+   │
+   └─ setInterval(morphConstellation, 8000)
+
+2. animate(time)  ← Inicia el loop principal
+```
+
+### Cada 8 Segundos (MORPHING)
+
+```
+morphConstellation()
+└─ Para cada estrella:
+   ├─ Elige nuevo punto del contorno
+   ├─ Calcula nuevo ángulo/distancia
+   └─ Actualiza destX, destY
+```
+
+### Cada Frame (~16.67ms a 60fps)
+
+```
+animate(time)
+├─ Limpia canvas (fondo negro)
+│
+├─ Dibuja 800 estrellas de fondo
+│  └─ Calcula twinkle → dibuja círculo
+│
+└─ Dibuja 1,800 estrellas del logo
+   └─ Para cada estrella: drawStar()
+      ├─ Mueve hacia destino (2% por frame)
+      ├─ Calcula twinkle
+      ├─ Dibuja glow (halo)
+      └─ Dibuja core (núcleo)
+```
+
+---
+
+## 🎯 RESPONSABILIDADES POR FUNCIÓN
+
+| Función | Categoría | Responsabilidad | Frecuencia |
+|---------|-----------|----------------|------------|
+| `getPathPoints()` | 📐 Geometría | Extrae forma del logo SVG | 1x al inicio |
+| `svgToScreen()` | 📐 Geometría | Convierte coordenadas SVG → píxeles | 1x al inicio |
+| `init()` | 🏗️ Setup | Inicializa todo el sistema | 1x al inicio + resize |
+| `morphConstellation()` | 🔄 Morphing | Regenera posiciones destino | Cada 8 segundos |
+| `drawStar()` | ✏️ Render | Dibuja + mueve UNA estrella | 1,800x por frame |
+| `animate()` | 🎬 Loop | Orquesta todo el renderizado | 60x por segundo |
+| `resizeCanvas()` | 🔧 Util | Ajusta tamaño canvas | Al resize |
+| `hexToRgb()` | 🔧 Util | Convierte hex → RGB | Múltiples/frame |
+
+---
+
+## ⚙️ PARÁMETROS CLAVE DEL SISTEMA
+
+### Generación
+- **Puntos del logo**: 900 (300 hoja + 600 cuerpo)
+- **Estrellas del logo**: 1,800 (500+400+500+400 en 4 capas)
+- **Estrellas de fondo**: 800 (480 pequeñas + 200 medianas + 120 grandes)
+
+### Morphing
+- **Intervalo**: 8,000ms (8 segundos)
+- **Velocidad de transición**: 2% por frame (~3-4 segundos para completar)
+
+### Twinkle
+- **Rango de velocidad**: 0.001 - 0.006 radianes/ms
+- **Oscilación de brillo**: 50% - 100% del brightness base
+
+### Renderizado
+- **Frame rate**: ~60 fps (requestAnimationFrame)
+- **Glow multiplier**: 1.1x - 1.2x el tamaño de estrella
+- **Core multiplier**: 0.8x el tamaño de estrella
+
+---
+
+## 🔍 CASOS DE USO
+
+### Para modificar la densidad de estrellas:
+→ Ajusta `count` en los `layers` de `init()`
+
+### Para cambiar velocidad de morphing:
+→ Cambia `8000` en `setInterval(morphConstellation, 8000)`
+
+### Para ajustar velocidad de transición:
+→ Cambia `0.02` en `star.x += (star.destX - star.x) * 0.02`
+
+### Para modificar intensidad de twinkle:
+→ Ajusta rangos `speed` en las capas de `init()`
+
+### Para cambiar colores:
+→ Modifica arrays `colors` en las capas de `init()`
+
+---
+
+**Última actualización**: 2026-01-20  
+**Versión**: 2.0.0 (Morphing Constellation)

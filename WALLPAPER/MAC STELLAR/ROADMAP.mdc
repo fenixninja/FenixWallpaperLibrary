@@ -1,0 +1,132 @@
+# Mac Stellar Wallpaper - Project Roadmap
+
+## Estado Actual ✅
+
+El proyecto ha alcanzado su primera versión completamente funcional y optimizada:
+
+### Funcionalidades Implementadas
+
+#### **stellar.html** - Implementación Limpia y Optimizada
+- ✅ **Constelación de 1,800 estrellas** formando el logo de Apple
+- ✅ **Sistema Canvas puro** para máximo rendimiento
+- ✅ **Paleta cyan brillante** (#00d4ff, #26c6da, #4dd0e1, #80deea)
+- ✅ **Estrellas pequeñas y sharp** (0.8-2.5px) para look limpio
+- ✅ **Efecto twinkle pronunciado** (oscilación 50-100%)
+- ✅ **Morphing constellation** - transición orgánica cada 8 segundos
+- ✅ **SVG coordinate fix** - sistema de coordenadas correcto
+- ✅ **Logo optimizado** - posición (top: 80%) y tamaño (3.5% viewport) ajustados
+- ✅ **4 capas de densidad** con distribución espacial inteligente
+- ✅ **800 estrellas de fondo mejoradas** - 3 categorías de tamaño, colores variados cyan/blanco
+
+#### Documentación
+- ✅ **TECHNICAL_DOCS.mdc** - Documentación completa de todas las funciones JavaScript
+- ✅ Flujos del sistema y arquitectura documentados
+- ✅ Parámetros clave y casos de uso incluidos
+
+#### Rendimiento Optimizado
+- ✅ Sprite caching eliminado (no necesario con estrellas pequeñas)
+- ✅ Centralización de tiempo con `requestAnimationFrame`
+- ✅ Canvas rendering directo sin filtros SVG pesados
+- ✅ Glow effects optimizados (1.1-1.2x multiplicador)
+
+#### Control de Versiones
+- ✅ Repositorio Git inicializado
+- ✅ Commits descriptivos con historial completo
+- ✅ Roadmap documentado
+
+---
+
+## Próximas Mejoras (Prioridad Alta)
+
+### 1. Interactividad Avanzada
+- [ ] **Mouse parallax effect** - estrellas responden al movimiento del mouse
+- [ ] **Click para generar nebulosa** - explosión temporal de nuevas estrellas
+- [ ] **Scroll zoom** - acercar/alejar el logo con la rueda del mouse
+
+### 2. Configurador de Usuario
+- [ ] Panel de configuración con sliders para:
+  - Densidad de estrellas (500-3000)
+  - Velocidad de morphing (5-15 segundos)
+  - Velocidad de twinkle (lento/medio/rápido)
+  - Paleta de colores (cyan/gold/purple/custom)
+  - Tamaño del logo (1-5% viewport)
+
+### 3. Modos de Visualización
+- [ ] **Modo estático** - deshabilitar morphing
+- [ ] **Modo hipnótico** - morphing continuo rápido
+- [ ] **Modo minimal** - solo contorno, sin relleno
+- [ ] **Modo galaxia** - efecto de rotación lenta
+
+---
+
+## Mejoras Estéticas (Prioridad Media)
+
+### 1. Efectos Visuales Avanzados
+- [ ] **Estrellas fugaces** - cruzan ocasionalmente
+- [ ] **Nebulosa de fondo** - color gradient sutil
+- [ ] **Rayos de luz** - desde el centro del logo
+- [ ] **Partículas de polvo estelar** - muy sutiles entre estrellas
+
+### 2. Variantes de Color
+- [ ] **Tema dorado** - tonos gold/amber
+- [ ] **Tema morado** - purple/magenta
+- [ ] **Tema aurora** - green/pink borealis
+- [ ] **Tema sunset** - orange/red gradient
+
+### 3. Animaciones Adicionales
+- [ ] **Pulsación del logo** - breathing effect suave
+- [ ] **Olas de brillo** - wave pattern a través de las estrellas
+- [ ] **Efecto de entrada** - estrellas convergen desde los bordes
+
+---
+
+## Tareas Técnicas
+
+### Testing y Calidad
+- [ ] Unit tests para funciones core
+- [ ] Performance profiling
+- [ ] Cross-browser testing (Safari, Chrome, Firefox)
+- [ ] Mobile optimization
+
+### Optimización Avanzada
+- [ ] Web Workers para cálculos de física
+- [ ] OffscreenCanvas para renderizado paralelo
+- [ ] Adaptive quality based on FPS
+
+### Distribución
+- [ ] Progressive Web App (PWA) support
+- [ ] Offline functionality
+- [ ] Exportar como video/GIF
+- [ ] Wallpaper Engine integration
+
+---
+
+## Features Experimentales (Backlog)
+
+- [ ] VR/3D mode - logo en espacio 3D
+- [ ] Audio reactive - responde a música
+- [ ] Multi-logo mode - varios logos Apple históricos
+- [ ] Constellation drawing - dibujar propias constelaciones
+- [ ] Time-lapse mode - acelerar la evolución del logo
+
+---
+
+## Notas de Desarrollo
+
+### Decisiones de Diseño
+- **Morphing cada 8 segundos**: Balance entre dinamismo y estabilidad visual
+- **1,800 estrellas**: Suficientes para definir forma, no tantas que sea sucio
+- **Transición 2% por frame**: Suave pero perceptible
+- **Cyan como color principal**: Match con el Mac Stellar original
+
+### Lecciones Aprendidas
+- SVG paths necesitan conversión de coordenadas PostScript a web
+- Menos estrellas más pequeñas > muchas estrellas grandes
+- El efecto morphing crea organicidad sin perder identidad del logo
+- Twinkle pronunciado es esencial para el efecto "stellar"
+- **Logo centering**: `translate(-50%, -50%)` es crítico para centrado perfecto en cualquier pantalla
+
+---
+
+**Última actualización**: 2026-01-20
+**Versión actual**: 2.0.0 (Morphing Constellation)
