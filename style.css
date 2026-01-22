@@ -1,0 +1,142 @@
+:root {
+  --bg-1: #0d0b16;   /* base oscuro */
+  --bg-2: #1a1630;   /* violeta profundo */
+  --glow-1: #ff6a00; /* naranja */
+  --glow-2: #ff2e63; /* magenta */
+  --glow-3: #ffc107; /* dorado */
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(1200px 800px at 50% 50%, var(--bg-2), var(--bg-1) 60%);
+  color: #fff;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+/* Capa de gradiente sutil animado, por encima del canvas pero detrás del texto */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  background:
+    conic-gradient(from 180deg at 50% 50%, rgba(255,106,0,0.12), rgba(255,46,99,0.12), rgba(255,193,7,0.1), rgba(255,106,0,0.12));
+  filter: blur(50px) saturate(120%);
+  animation: swirl 24s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes swirl {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.06); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+/* Canvas al fondo */
+#bg {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  z-index: -1;
+}
+
+/* Contenedor centrado */
+.center {
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  z-index: 2; /* subir por encima de cualquier overlay sutil */
+}
+
+/* Logo centrado con efecto de brillo y gradiente animado */
+.logo {
+  margin: 0;
+  font-size: clamp(2.8rem, 6vw + 1rem, 8rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  position: relative;
+  line-height: 1.1;
+
+  /* Fallback visible en navegadores sin background-clip:text */
+  color: #ffd8a8;
+  text-shadow: 0 0 6px rgba(255,106,0,0.6), 0 0 16px rgba(255,46,99,0.35);
+  filter: drop-shadow(0 0 6px rgba(255,106,0,0.6)) drop-shadow(0 0 16px rgba(255,46,99,0.35));
+}
+
+/* Pequeña separación entre “Fénix” y “Wallpaper” para balancear */
+.logo .gap {
+  display: inline-block;
+  width: 0.5ch;
+}
+
+@keyframes shine {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Sutil animación independiente por letra para dar vida */
+.logo span:not(.gap) {
+  display: inline-block;
+  animation: float 3.2s ease-in-out infinite;
+}
+
+.logo span:nth-child(odd) { animation-duration: 3.5s; }
+.logo span:nth-child(3n) { animation-duration: 4.1s; }
+.logo span:nth-child(5n) { animation-duration: 3.0s; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-0.04em); }
+}
+
+/* Un “halo” sutil detrás del texto para mayor contraste */
+.logo::after {
+  content: "";
+  position: absolute;
+  inset: -1.2rem;
+  border-radius: 24px;
+  background: radial-gradient(120px 60px at 40% 50%, rgba(255,106,0,0.25), transparent 60%),
+              radial-gradient(160px 80px at 60% 50%, rgba(255,46,99,0.2), transparent 65%);
+  filter: blur(20px);
+  z-index: -1;
+  opacity: 0.9;
+  animation: halo 10s ease-in-out infinite;
+}
+
+@keyframes halo {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+/* Ajustes responsivos mínimos */
+@media (max-width: 420px) {
+  .logo { letter-spacing: 0.02em; }
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .logo {
+    background: linear-gradient(90deg, var(--glow-1), var(--glow-2), var(--glow-3), var(--glow-1));
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent; /* asegura visibilidad del gradiente en WebKit */
+    animation: shine 6s ease-in-out infinite;
+  }
+}
